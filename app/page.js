@@ -49,7 +49,6 @@ export default function HomePage() {
         });
 
         fetchedItems.forEach((item) => {
-          // item.category could be populated or just ID
           const catId = item.category?._id || item.category;
           if (groupedItems[catId]) {
             groupedItems[catId].push(item);
@@ -81,6 +80,7 @@ export default function HomePage() {
             key={cat._id}
             title={cat.title}
             items={itemsMap[cat._id] || []}
+            user={user} // Pass user here
           />
         ))}
       </div>

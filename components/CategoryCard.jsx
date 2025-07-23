@@ -1,25 +1,29 @@
+// components/CategoryCard.js
 "use client";
 import Image from "next/image";
-import { toast } from "react-toastify";
 import { useCart } from "@/context/CartContext";
+import { toast } from "react-toastify";
 
-export default function CategoryCard({ title, items }) {
+export default function CategoryCard({ title, items, user }) {
   const { addToCart } = useCart();
+
+  const handleAdd = (item) => {
+    addToCart(item);
+    toast.success(`${item.name} added to cart!`);
+  };
 
   return (
     <div className="w-full px-8 py-2">
       <h2 className="text-2xl text-pink-800 font-semibold mb-4 border-b border-gray-600 pb-2">
         {title}
       </h2>
+
       <div className="category-card flex gap-4 h-[32vh] w-full overflow-x-auto flex-nowrap scroll-smooth scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-gray-300">
         {items.length > 0 ? (
           items.map((item) => {
-            // 👇 Ensure valid image path
-            let imagePath = "/images/Background-1.jpg"; // fallback
+            let imagePath = "/images/Background-1.jpg";
             if (item.image) {
-              if (item.image.startsWith("http")) {
-                imagePath = item.image;
-              } else if (item.image.startsWith("/")) {
+              if (item.image.startsWith("http") || item.image.startsWith("/")) {
                 imagePath = item.image;
               } else {
                 imagePath = "/" + item.image;
@@ -40,21 +44,22 @@ export default function CategoryCard({ title, items }) {
                     unoptimized
                   />
                 </div>
+
                 <div className="flex flex-col w-full items-center justify-center">
                   <h3 className="text-xl font-bold text-center">{item.name}</h3>
                   <p className="text-sm text-gray-700 text-center">{item.description}</p>
                 </div>
+
                 <div className="flex w-full justify-between mt-2 items-center">
                   <p className="text-lg font-semibold">₹{item.price}</p>
-                  <button
-                    onClick={() => {
-                      addToCart(item);
-                      toast.success(`🛒 ${item.name} added to your order`);
-                    }}
-                    className="px-6 py-1 rounded-md bg-black text-white hover:bg-pink-800 cursor-pointer"
-                  >
-                    Add
-                  </button>
+                  {user?.role !== "admin" && (
+                    <button
+                      onClick={() => handleAdd(item)}
+                      className="px-6 py-1 rounded-md bg-black text-white hover:bg-pink-800 cursor-pointer"
+                    >
+                      Add
+                    </button>
+                  )}
                 </div>
               </div>
             );

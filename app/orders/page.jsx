@@ -4,10 +4,14 @@ import Navbar from "@/components/Navbar";
 import Image from "next/image";
 import { useCart } from "@/context/CartContext";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useContext } from "react";
+import { AuthContext } from "@/context/AuthContext";
+import axios from "axios";
+import { toast } from "react-toastify";
 
 const MyOrderPage = () => {
   const { cartItems = [], removeFromCart, updateQuantity, getTotal } = useCart();
+  const { token } = useContext(AuthContext);
   const router = useRouter();
 
   const incrementQty = (id) => {
@@ -20,9 +24,73 @@ const MyOrderPage = () => {
     if (item && item.quantity > 1) updateQuantity(id, item.quantity - 1);
   };
 
-  const handlePayNow = () => {
-    alert("Payment functionality coming soon!");
-    router.push("/");
+  const handlePayNow = async () => {
+    try {
+      const amount = getTotal();
+
+      const orderRes = await axios.post(
+        "http://localhost:4000/api/payment/order",
+        { amount },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const { orderId, amount: orderAmount } = orderRes.data;
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: orderAmount,
+        currency: "INR",
+        name: "Apna Khana",
+        description: "Food Order Payment",
+        order_id: orderId,
+        handler: async function (response) {
+          try {
+            const verifyRes = await axios.post(
+              "http://localhost:4000/api/payment/verify",
+              {
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${token}`,
+                },
+              }
+            );
+
+            toast.success(verifyRes.data.message || "Payment successful!");
+
+            if (verifyRes.data.success) {
+              router.push("/success");
+            } else {
+              router.push("/failure");
+            }
+          } catch (verifyErr) {
+            console.error("Verification failed:", verifyErr);
+            toast.error("Verification failed");
+            router.push("/failure");
+          }
+        },
+        theme: {
+          color: "#F37254",
+        },
+      };
+
+      const rzp = new window.Razorpay(options);
+      rzp.on("payment.failed", () => {
+        toast.error("Payment failed.");
+        router.push("/failure");
+      });
+      rzp.open();
+    } catch (err) {
+      console.error("Payment error:", err);
+      toast.error("Payment failed. Try again.");
+    }
   };
 
   useEffect(() => {
@@ -32,9 +100,8 @@ const MyOrderPage = () => {
     };
   }, []);
 
-  // Helper to get valid image path or fallback
   const getImagePath = (img) => {
-    if (!img || img === "") return "/images/placeholder.jpg"; // fallback image path
+    if (!img || img === "") return "/images/placeholder.jpg";
     if (img.startsWith("http") || img.startsWith("/")) return img;
     return "/" + img;
   };
@@ -87,11 +154,16 @@ const MyOrderPage = () => {
                     >
                       +
                     </button>
-                    <span className="ml-6 font-bold text-lg">₹{item.price * item.quantity}</span>
+                    <span className="ml-6 font-bold text-lg">
+                      ₹{item.price * item.quantity}
+                    </span>
                   </div>
                 </div>
                 <button
-                  onClick={() => removeFromCart(item._id)}
+                  onClick={() => {
+                    removeFromCart(item._id);
+                    toast.info(`${item.name} removed from cart`);
+                  }}
                   className="ml-4 bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md font-semibold transition"
                 >
                   Remove

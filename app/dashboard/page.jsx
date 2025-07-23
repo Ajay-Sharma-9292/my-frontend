@@ -50,6 +50,13 @@ const Dashboard = () => {
             </div>
           </Link>
 
+           <Link href="/manage-categories">
+            <div className="cursor-pointer bg-white shadow-md rounded-2xl p-6 hover:shadow-xl transition">
+              <h2 className="text-xl font-semibold">Manage Category</h2>
+              <p className="text-gray-600 mt-2">Edit or delete existing categories</p>
+            </div>
+          </Link>
+
         </div>
       </div>
     </>

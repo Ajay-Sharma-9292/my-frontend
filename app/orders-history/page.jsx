@@ -1,7 +1,7 @@
 import Navbar from '@/components/Navbar'
 import React from 'react'
 
-const page = () => {
+const orderHistory = () => {
   return (
     <>
     <Navbar />
@@ -12,4 +12,4 @@ const page = () => {
   )
 }
 
-export default page
+export default orderHistory;

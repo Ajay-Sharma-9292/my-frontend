@@ -6,26 +6,34 @@ import { useRouter } from "next/navigation";
 import { AuthContext } from "@/context/AuthContext";
 import { toast } from "react-toastify";
 
-const ManageItems = () => {
-  const [items, setItems] = useState([]);
+const ManageCategories = () => {
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user, token } = useContext(AuthContext);
   const router = useRouter();
 
-  // State for popup
   const [showDeletePopup, setShowDeletePopup] = useState(false);
-  const [itemToDelete, setItemToDelete] = useState(null);
+  const [categoryToDelete, setCategoryToDelete] = useState(null);
 
-  const fetchItems = async () => {
+  const fetchCategories = async () => {
     try {
       setLoading(true);
-      const res = await axios.get("http://localhost:4000/api/items", {
+      const res = await axios.get("http://localhost:4000/api/categories", {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setItems(res.data.items || []);
+      console.log("Categories API response:", res.data);
+
+      if (Array.isArray(res.data)) {
+        setCategories(res.data);
+      } else if (Array.isArray(res.data.categories)) {
+        setCategories(res.data.categories);
+      } else {
+        setCategories([]);
+        toast.error("Unexpected response structure from categories API.");
+      }
     } catch (error) {
-      console.error("Error fetching items:", error);
-      toast.error("Failed to load items.");
+      console.error("Error fetching categories:", error);
+      toast.error("Failed to load categories.");
     } finally {
       setLoading(false);
     }
@@ -33,41 +41,43 @@ const ManageItems = () => {
 
   useEffect(() => {
     if (user?.role === "admin") {
-      fetchItems();
+      fetchCategories();
     } else {
       router.push("/");
     }
   }, [token, user, router]);
 
-  // Show popup and set the item to delete
-  const confirmDelete = (item) => {
-    setItemToDelete(item);
+  const confirmDelete = (category) => {
+    setCategoryToDelete(category);
     setShowDeletePopup(true);
   };
 
   const cancelDelete = () => {
-    setItemToDelete(null);
+    setCategoryToDelete(null);
     setShowDeletePopup(false);
   };
 
   const handleDelete = async () => {
-    if (!itemToDelete) return;
+    if (!categoryToDelete) return;
 
     try {
-      await axios.delete(`http://localhost:4000/api/items/${itemToDelete._id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-      toast.success("Item deleted successfully.");
+      await axios.delete(
+        `http://localhost:4000/api/categories/${categoryToDelete._id}`,
+        {
+          headers: { Authorization: `Bearer ${token}` },
+        }
+      );
+      toast.success("Category deleted successfully.");
       setShowDeletePopup(false);
-      setItemToDelete(null);
-      fetchItems();
+      setCategoryToDelete(null);
+      fetchCategories();
     } catch (error) {
-      console.error("Delete item error:", error);
+      console.error("Delete category error:", error);
       toast.error(
-        error.response?.data?.message || "Failed to delete item."
+        error.response?.data?.message || "Failed to delete category."
       );
       setShowDeletePopup(false);
-      setItemToDelete(null);
+      setCategoryToDelete(null);
     }
   };
 
@@ -85,33 +95,28 @@ const ManageItems = () => {
       </button>
 
       <div className="max-w-5xl mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-4 text-center">🧾 Manage Items</h1>
-        {items.length === 0 ? (
-          <p className="text-center">No items found.</p>
+        <h1 className="text-2xl font-bold mb-4 text-center">📁 Manage Categories</h1>
+        {categories.length === 0 ? (
+          <p className="text-center">No categories found.</p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {items.map((item) => (
+            {categories.map((category) => (
               <div
-                key={item._id}
+                key={category._id}
                 className="bg-white p-4 rounded shadow relative"
               >
-                <h2 className="text-lg font-semibold">{item.name}</h2>
-                <p className="text-sm text-gray-600">{item.description}</p>
-                <p className="mt-1 font-bold">₹{item.price}</p>
-                <p className="mt-1 text-sm italic text-gray-500">
-                  Category: {item.category?.title || "Uncategorized"}
-                </p>
+                <h2 className="text-lg font-semibold">{category.title}</h2>
                 <div className="mt-4 flex gap-2">
                   <button
                     onClick={() =>
-                      router.push(`/manage-items/edit/${item._id}`)
+                      router.push(`/manage-categories/edit/${category._id}`)
                     }
-                    className="bg-blue-500 hover:bg-blue-700 text-black px-3 py-1 rounded-2xl"
+                    className="bg-blue-400 hover:bg-blue-700 text-black px-3 py-1 rounded-2xl"
                   >
                     Edit
                   </button>
                   <button
-                    onClick={() => confirmDelete(item)}
+                    onClick={() => confirmDelete(category)}
                     className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded-2xl"
                   >
                     Delete
@@ -123,19 +128,18 @@ const ManageItems = () => {
         )}
       </div>
 
-      {/* Delete Confirmation Popup */}
       {showDeletePopup && (
         <div
           className="fixed inset-0 flex items-center justify-center bg-white/50 bg-opacity-50 z-50"
-          onClick={cancelDelete} // Close if clicking outside popup
+          onClick={cancelDelete}
         >
           <div
             className="bg-white rounded p-6 w-80 text-center"
-            onClick={(e) => e.stopPropagation()} // Prevent close on inner click
+            onClick={(e) => e.stopPropagation()}
           >
             <p className="mb-4 text-lg font-semibold">
               Are you sure you want to delete <br />
-              <span className="text-red-600">{itemToDelete?.name}</span>?
+              <span className="text-red-600">{categoryToDelete?.title}</span>?
             </p>
             <div className="flex justify-center gap-4">
               <button
@@ -158,4 +162,4 @@ const ManageItems = () => {
   );
 };
 
-export default ManageItems;
+export default ManageCategories;

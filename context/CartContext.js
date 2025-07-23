@@ -1,64 +1,79 @@
- "use client";
-
+"use client";
 import { createContext, useContext, useEffect, useState } from "react";
 
+// Create Context
 export const CartContext = createContext();
+
+// Custom Hook to use Cart Context
+export const useCart = () => {
+  const context = useContext(CartContext);
+  if (!context) {
+    throw new Error("useCart must be used within a CartProvider");
+  }
+  return context;
+};
 
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
+  const [cartLoaded, setCartLoaded] = useState(false);
 
-  // Load cart from localStorage
+  // Load cart from localStorage on first mount
   useEffect(() => {
-    try {
-      const storedCart = JSON.parse(localStorage.getItem("cartItems")) || [];
-      setCartItems(storedCart);
-    } catch (error) {
-      console.error("Failed to load cart:", error);
-      setCartItems([]);
+    const storedCart = localStorage.getItem("cartItems");
+    if (storedCart) {
+      setCartItems(JSON.parse(storedCart));
     }
+    setCartLoaded(true);
   }, []);
 
-  // Sync cart to localStorage
+  // Save cart to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem("cartItems", JSON.stringify(cartItems));
-  }, [cartItems]);
+    if (cartLoaded) {
+      localStorage.setItem("cartItems", JSON.stringify(cartItems));
+    }
+  }, [cartItems, cartLoaded]);
 
-  // Add to cart
+  // Add item to cart
   const addToCart = (item) => {
-    setCartItems((prevItems) => {
-      const existingItem = prevItems.find((i) => i._id === item._id);
-      if (existingItem) {
-        return prevItems.map((i) =>
+    const existingItem = cartItems.find((i) => i._id === item._id);
+    if (existingItem) {
+      setCartItems((prev) =>
+        prev.map((i) =>
           i._id === item._id ? { ...i, quantity: i.quantity + 1 } : i
-        );
-      } else {
-        return [...prevItems, { ...item, quantity: 1 }];
-      }
-    });
+        )
+      );
+    } else {
+      setCartItems([...cartItems, { ...item, quantity: 1 }]);
+    }
   };
 
-  // Remove item
+  // Remove item from cart
   const removeFromCart = (itemId) => {
-    setCartItems((prevItems) => prevItems.filter((item) => item._id !== itemId));
+    setCartItems((prev) => prev.filter((item) => item._id !== itemId));
   };
 
   // Update item quantity
   const updateQuantity = (itemId, newQuantity) => {
-    if (newQuantity < 1) return;
-    setCartItems((prevItems) =>
-      prevItems.map((item) =>
+    setCartItems((prev) =>
+      prev.map((item) =>
         item._id === itemId ? { ...item, quantity: newQuantity } : item
       )
     );
   };
 
-  // Total price
-  const getTotal = () => {
-    return cartItems.reduce((total, item) => total + item.price * item.quantity, 0);
+  // Clear cart
+  const clearCart = () => {
+    setCartItems([]);
+    localStorage.removeItem("cartItems");
   };
 
-  // Optional: clear cart
-  const clearCart = () => setCartItems([]);
+  // Get total price
+  const getTotal = () => {
+    return cartItems.reduce(
+      (total, item) => total + item.price * item.quantity,
+      0
+    );
+  };
 
   return (
     <CartContext.Provider
@@ -68,13 +83,11 @@ export const CartProvider = ({ children }) => {
         removeFromCart,
         updateQuantity,
         getTotal,
-        clearCart, // optional
+        clearCart,
+        cartLoaded,
       }}
     >
       {children}
     </CartContext.Provider>
   );
 };
-
-// Hook
-export const useCart = () => useContext(CartContext);
